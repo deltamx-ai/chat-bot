@@ -4,19 +4,18 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node ./scripts/tauri-preflight.mjs dev",
+    "dev": "CI=false tauri dev",
     "web:dev": "vite",
     "build": "vite build",
     "web:build": "vite build",
-    "tauri:dev": "node ./scripts/tauri-preflight.mjs dev",
-    "tauri:build": "node ./scripts/tauri-preflight.mjs build",
+    "tauri:dev": "CI=false tauri dev",
+    "tauri:build": "CI=false tauri build",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,md}\" \"src-tauri/**/*.{toml,rs,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,md}\" \"src-tauri/**/*.json\"",
     "preview": "vite preview",
-    "cargo:check": "cargo check --manifest-path src-tauri/Cargo.toml",
-    "doctor:tauri": "node ./scripts/tauri-preflight.mjs doctor"
+    "cargo:check": "cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "react": "^19.2.5",
