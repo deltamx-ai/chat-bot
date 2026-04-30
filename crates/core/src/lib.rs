@@ -5,6 +5,7 @@ pub mod conversation;
 pub mod execution;
 pub mod memory;
 pub mod planning;
+pub mod provider;
 pub mod workspace;
 
 use serde::{Deserialize, Serialize};
