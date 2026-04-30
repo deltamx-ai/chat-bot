@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.maxai.chatbot",
   "build": {
+    "beforeDevCommand": "npm run web:dev",
+    "beforeBuildCommand": "npm run web:build",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173"
   },

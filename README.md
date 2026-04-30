@@ -40,8 +40,11 @@ chat-bot/
 ```bash
 cd apps/desktop
 npm install
+npm run dev
+npm run tauri:build
 npm run lint
 npm run build
+npm run cargo:check
 ```
 
 ### api-server

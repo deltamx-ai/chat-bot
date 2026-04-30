@@ -1,24 +1,31 @@
 {
   "name": "desktop",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "CI=false tauri dev",
+    "web:dev": "vite",
+    "build": "vite build",
+    "web:build": "vite build",
+    "tauri:dev": "CI=false tauri dev",
+    "tauri:build": "CI=false tauri build",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,md}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,md}\"",
-    "preview": "vite preview"
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,md}\" \"src-tauri/**/*.{toml,rs,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,md}\" \"src-tauri/**/*.json\"",
+    "preview": "vite preview",
+    "cargo:check": "cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "@tauri-apps/api": "^2.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.2.4",
+    "@tauri-apps/cli": "^2.8.0",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
