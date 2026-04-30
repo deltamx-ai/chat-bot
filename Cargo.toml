@@ -1,11 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-  "apps/api-server",
   "apps/desktop/src-tauri",
-  "crates/api-contracts",
-  "crates/application",
-  "crates/domain"
+  "crates/cli",
+  "crates/core",
+  "crates/server"
 ]
 
 [workspace.dependencies]
