@@ -1,5 +1,5 @@
 node_modules/
-apps/web/node_modules/
-apps/web/dist/
+apps/desktop/node_modules/
+apps/desktop/dist/
 target/
 .DS_Store

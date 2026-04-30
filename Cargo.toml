@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
   "apps/api-server",
-  "apps/desktop-tauri/src-tauri",
+  "apps/desktop/src-tauri",
   "crates/api-contracts",
   "crates/domain",
   "crates/application"

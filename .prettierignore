@@ -1,6 +1,6 @@
 node_modules
-apps/web/node_modules
-apps/web/dist
+apps/desktop/node_modules
+apps/desktop/dist
 target
 package-lock.json
-apps/web/package-lock.json
+apps/desktop/package-lock.json

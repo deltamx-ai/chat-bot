@@ -2,15 +2,15 @@
   "name": "chat-bot-workspace",
   "private": true,
   "workspaces": [
-    "apps/web"
+    "apps/desktop"
   ],
   "scripts": {
-    "dev:web": "npm --prefix apps/web run dev",
-    "build:web": "npm --prefix apps/web run build",
-    "check:web": "npm --prefix apps/web run build",
-    "lint:web": "npm --prefix apps/web run lint",
-    "format:web": "prettier --write \"apps/web/src/**/*.{ts,tsx,css}\" \"apps/web/*.{json,js,ts,md}\"",
-    "format:check:web": "prettier --check \"apps/web/src/**/*.{ts,tsx,css}\" \"apps/web/*.{json,js,ts,md}\"",
+    "dev:web": "npm --prefix apps/desktop run dev",
+    "build:web": "npm --prefix apps/desktop run build",
+    "check:web": "npm --prefix apps/desktop run build",
+    "lint:web": "npm --prefix apps/desktop run lint",
+    "format:web": "prettier --write \"apps/desktop/src/**/*.{ts,tsx,css}\" \"apps/desktop/*.{json,js,ts,md}\"",
+    "format:check:web": "prettier --check \"apps/desktop/src/**/*.{ts,tsx,css}\" \"apps/desktop/*.{json,js,ts,md}\"",
     "format:rust": "cargo fmt --all",
     "format:check:rust": "cargo fmt --all -- --check",
     "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings",
