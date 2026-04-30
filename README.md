@@ -40,6 +40,7 @@ chat-bot/
 ```bash
 cd apps/desktop
 npm install
+npm run doctor:tauri
 npm run dev
 npm run tauri:build
 npm run lint

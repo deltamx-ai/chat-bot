@@ -12,6 +12,7 @@ Tauri 桌面端项目。
 ```bash
 cd apps/desktop
 npm install
+npm run doctor:tauri
 npm run dev
 npm run tauri:build
 npm run lint
@@ -20,6 +21,7 @@ npm run cargo:check
 ```
 
 说明：
+- `npm run doctor:tauri`：预检查 Linux 下 Tauri 所需系统依赖
 - `npm run dev` / `npm run tauri:dev`：启动 Tauri 桌面开发环境
 - `npm run web:dev`：只启动前端 Vite 开发服务器
 - `npm run tauri:build`：构建桌面应用
