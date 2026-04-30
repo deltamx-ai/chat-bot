@@ -10,7 +10,7 @@ pub mod workspace;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkspaceId(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

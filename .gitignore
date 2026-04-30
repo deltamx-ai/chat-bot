@@ -4,3 +4,4 @@ apps/dist/
 target/
 apps/src-tauri/target/
 .DS_Store
+.alma-snapshots
