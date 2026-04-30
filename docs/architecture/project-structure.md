@@ -40,7 +40,7 @@ chat-bot/
 - `cli` 可以依赖 `core`
 - `server` 可以依赖 `core`
 - `core` 不依赖 `cli` 和 `server`
-- `apps/desktop/src-tauri` 可以按需依赖 `core`
+- `apps/src-tauri` 可以按需依赖 `core`
 
 ## 当前推荐业务模块
 - `conversation`

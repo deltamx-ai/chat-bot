@@ -10,7 +10,7 @@ Tauri 桌面端项目。
 ## 常用命令
 
 ```bash
-cd apps/desktop
+cd apps
 npm install
 npm run dev
 npm run tauri:build

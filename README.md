@@ -4,7 +4,7 @@
 
 当前主要包含两个运行入口和一个核心复用层：
 
-- `apps/desktop`：Tauri 桌面端项目
+- `apps`：Tauri 桌面端项目
   - 前端：React + TypeScript + Vite
   - 桌面壳：`src-tauri`
 - `crates/server`：独立的 Rust 服务端入口
@@ -36,7 +36,7 @@ chat-bot/
 
 ### desktop
 ```bash
-cd apps/desktop
+cd apps
 npm install
 npm run dev
 npm run tauri:build

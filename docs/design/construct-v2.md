@@ -60,7 +60,7 @@ Persistence Impl / Integration Impl
 ## 3. 模块依赖关系图
 
 ```text
-apps/desktop-tauri/ui ───────┐
+apps-tauri/ui ───────┐
 apps/web ────────────────────┤
                              v
                      [application]
@@ -900,7 +900,7 @@ UI 不一定要吃所有底层事件，建议做一层投影：
 
 ### 15.2 app 层依赖规则
 
-#### `apps/desktop-tauri`
+#### `apps-tauri`
 只应该依赖：
 - `application`
 - `api-contracts`
