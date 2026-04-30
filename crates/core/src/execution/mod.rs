@@ -17,10 +17,17 @@ pub mod writer;
 
 pub use context::ExecutionContext;
 pub use event::{EventId, TaskEvent, TaskEventKind};
+pub use reader::ReadTool;
+pub use registry::ToolRegistry;
 pub use result::{StepResult, TaskError, TaskResult, ToolError, ToolOutput};
 pub use router::InMemoryToolRouter;
-pub use runner::TaskRunner;
+pub use runner::{SequentialTaskRunner, TaskRunner};
+pub use search::SearchTool;
 pub use state::{StepTransitionError, TaskTransitionError};
 pub use step::{StepAction, StepId, StepStatus, TaskStep};
-pub use task::{AssigneeKind, Task, TaskAssignee, TaskId, TaskKind, TaskPriority, TaskStatus};
+pub use task::{
+    AssigneeKind, Task, TaskAssignee, TaskId, TaskKind, TaskPriority, TaskStatus, infer_task_kind,
+};
 pub use tool::Tool;
+pub use validate::ValidateTool;
+pub use writer::WriteTool;

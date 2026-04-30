@@ -16,8 +16,24 @@ impl SequentialTaskRunner {
     }
 }
 
+impl Default for SequentialTaskRunner {
+    fn default() -> Self {
+        Self::new(super::registry::ToolRegistry::default_router())
+    }
+}
+
 impl TaskRunner for SequentialTaskRunner {
     fn run(&self, mut task: Task, ctx: ExecutionContext) -> Result<TaskResult, TaskError> {
+        if task.status == TaskStatus::Draft {
+            task.transition_to(TaskStatus::Pending)
+                .map_err(|err| TaskError {
+                    code: "invalid_task_transition".into(),
+                    message: format!("{:?} -> {:?}", err.from, err.to),
+                    detail: None,
+                    retriable: false,
+                })?;
+        }
+
         task.transition_to(TaskStatus::Running)
             .map_err(|err| TaskError {
                 code: "invalid_task_transition".into(),

@@ -46,6 +46,33 @@ pub struct TaskStep {
 }
 
 impl TaskStep {
+    pub fn pending(
+        id: impl Into<String>,
+        task_id: TaskId,
+        index: u32,
+        title: impl Into<String>,
+        action: StepAction,
+        tool_name: impl Into<String>,
+        input: Value,
+    ) -> Self {
+        Self {
+            id: StepId(id.into()),
+            task_id,
+            index,
+            title: title.into(),
+            action,
+            tool_name: tool_name.into(),
+            status: StepStatus::Pending,
+            input,
+            output: None,
+            error: None,
+            depends_on: vec![],
+            created_at: String::new(),
+            started_at: None,
+            finished_at: None,
+        }
+    }
+
     pub fn transition_to(&mut self, next: StepStatus) -> Result<(), StepTransitionError> {
         super::state::ensure_step_transition(&self.status, &next)?;
         self.status = next;

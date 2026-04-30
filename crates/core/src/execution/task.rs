@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use crate::{conversation::ConversationId, planning::PlanId};
 
-use super::{TaskError, state::TaskTransitionError, step::TaskStep};
+use super::{StepAction, TaskError, state::TaskTransitionError, step::TaskStep};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TaskId(pub String);
@@ -79,9 +79,58 @@ pub struct Task {
 }
 
 impl Task {
+    pub fn draft(
+        id: impl Into<String>,
+        conversation_id: ConversationId,
+        kind: TaskKind,
+        title: impl Into<String>,
+        goal: impl Into<String>,
+        input: Value,
+    ) -> Self {
+        Self {
+            id: TaskId(id.into()),
+            conversation_id,
+            parent_task_id: None,
+            plan_id: None,
+            kind,
+            title: title.into(),
+            goal: goal.into(),
+            status: TaskStatus::Draft,
+            priority: TaskPriority::Normal,
+            assignee: None,
+            steps: vec![],
+            input,
+            output: None,
+            error: None,
+            retry_count: 0,
+            max_retries: 0,
+            tags: vec![],
+            created_at: String::new(),
+            updated_at: String::new(),
+            started_at: None,
+            finished_at: None,
+        }
+    }
+
+    pub fn with_steps(mut self, steps: Vec<TaskStep>) -> Self {
+        self.steps = steps;
+        self
+    }
+
     pub fn transition_to(&mut self, next: TaskStatus) -> Result<(), TaskTransitionError> {
         super::state::ensure_task_transition(&self.status, &next)?;
         self.status = next;
         Ok(())
+    }
+}
+
+pub fn infer_task_kind(action: &StepAction) -> TaskKind {
+    match action {
+        StepAction::Read => TaskKind::Research,
+        StepAction::Search => TaskKind::Research,
+        StepAction::Write => TaskKind::Write,
+        StepAction::Validate => TaskKind::Validate,
+        StepAction::Plan => TaskKind::Feature,
+        StepAction::Custom(kind) => TaskKind::Custom(kind.clone()),
     }
 }

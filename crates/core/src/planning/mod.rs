@@ -5,5 +5,5 @@ pub mod planner;
 pub mod strategy;
 
 pub use plan::{ExecutionPlan, PlanId, PlanRequest, PlannedStep, PlannedTask, StepDependency};
-pub use planner::{PlanError, Planner};
+pub use planner::{PlanError, Planner, SimplePlanner};
 pub use strategy::ExecutionStrategy;

@@ -1,4 +1,4 @@
-use super::{InMemoryToolRouter, Tool};
+use super::{InMemoryToolRouter, ReadTool, SearchTool, Tool, ValidateTool, WriteTool};
 
 pub struct ToolRegistry;
 
@@ -9,5 +9,14 @@ impl ToolRegistry {
             router.register(tool);
         }
         router
+    }
+
+    pub fn default_router() -> InMemoryToolRouter {
+        Self::with_tools(vec![
+            Box::new(ReadTool),
+            Box::new(SearchTool),
+            Box::new(WriteTool),
+            Box::new(ValidateTool),
+        ])
     }
 }
