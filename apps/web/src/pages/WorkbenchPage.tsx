@@ -73,7 +73,10 @@ function WorkbenchPage() {
 
         <div className="conversation-list">
           {conversations.map((item) => (
-            <article key={item.title} className={`conversation-item ${item.active ? 'active' : ''}`}>
+            <article
+              key={item.title}
+              className={`conversation-item ${item.active ? 'active' : ''}`}
+            >
               <div className="conversation-dot" />
               <div className="conversation-main">
                 <div className="conversation-title">{item.title}</div>
@@ -124,11 +127,7 @@ function WorkbenchPage() {
             <button className="ghost-btn">执行</button>
             <button className="ghost-btn">待办</button>
           </div>
-          <textarea
-            className="composer-input"
-            placeholder="按 Shift + Return 执行"
-            rows={5}
-          />
+          <textarea className="composer-input" placeholder="按 Shift + Return 执行" rows={5} />
         </div>
       </section>
     </main>

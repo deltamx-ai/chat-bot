@@ -1,0 +1,6 @@
+node_modules
+apps/web/node_modules
+apps/web/dist
+target
+package-lock.json
+apps/web/package-lock.json

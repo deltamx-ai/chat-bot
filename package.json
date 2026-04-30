@@ -7,6 +7,18 @@
   "scripts": {
     "dev:web": "npm --prefix apps/web run dev",
     "build:web": "npm --prefix apps/web run build",
-    "check:web": "npm --prefix apps/web run build"
+    "check:web": "npm --prefix apps/web run build",
+    "lint:web": "npm --prefix apps/web run lint",
+    "format:web": "prettier --write \"apps/web/src/**/*.{ts,tsx,css}\" \"apps/web/*.{json,js,ts,md}\"",
+    "format:check:web": "prettier --check \"apps/web/src/**/*.{ts,tsx,css}\" \"apps/web/*.{json,js,ts,md}\"",
+    "format:rust": "cargo fmt --all",
+    "format:check:rust": "cargo fmt --all -- --check",
+    "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings",
+    "format": "npm run format:web && npm run format:rust",
+    "lint": "npm run lint:web && npm run lint:rust",
+    "check": "npm run format:check:web && npm run format:check:rust && npm run lint && cargo check && npm run build:web"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
   }
 }
