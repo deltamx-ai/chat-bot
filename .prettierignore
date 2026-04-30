@@ -1,6 +1,0 @@
-node_modules
-apps/desktop/node_modules
-apps/desktop/dist
-target
-package-lock.json
-apps/desktop/package-lock.json
