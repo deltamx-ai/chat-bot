@@ -23,6 +23,7 @@ chat-bot/
 │  ├─ core/               # 核心领域与业务能力
 │  └─ server/             # 服务端入口
 ├─ docs/
+│  └─ architecture/storage.md  # 存储设计
 └─ Cargo.toml             # Rust 工程协调配置
 ```
 
