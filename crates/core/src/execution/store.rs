@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{EventId, Task, TaskError, TaskEvent, TaskId};
+use super::{EventId, Task, TaskError, TaskEvent, TaskEventKind, TaskId};
 
 pub trait TaskStore {
     fn save_task(&mut self, task: Task) -> Result<(), TaskError>;
@@ -31,6 +31,24 @@ impl InMemoryTaskStore {
             .map(|events| events.len() + 1)
             .unwrap_or(1);
         EventId(format!("evt_{}_{}", task_id.0, next_index))
+    }
+
+    pub fn push_task_event(
+        &mut self,
+        task_id: &TaskId,
+        step_id: Option<super::StepId>,
+        kind: TaskEventKind,
+        payload: serde_json::Value,
+    ) -> Result<(), TaskError> {
+        let event = TaskEvent {
+            id: self.next_event_id(task_id),
+            task_id: task_id.clone(),
+            step_id,
+            kind,
+            payload,
+            created_at: String::new(),
+        };
+        self.append_event(event)
     }
 }
 
