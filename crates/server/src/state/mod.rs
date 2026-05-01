@@ -1,9 +1,10 @@
 use core::{
     conversation::ConversationId,
     execution::{
-        EventStore, InMemoryTaskStore, Task, TaskEvent, TaskEventKind, TaskId, TaskKind,
-        TaskStatus, TaskStore,
+        EventStore, ExecutionContext, InMemoryTaskStore, SequentialTaskRunner, Task, TaskEvent,
+        TaskId, TaskResult, TaskStore,
     },
+    planning::{PlanRequest, Planner, SimplePlanner},
 };
 use serde_json::json;
 
@@ -14,31 +15,11 @@ pub struct AppState {
 
 impl AppState {
     pub fn demo() -> Self {
-        let mut store = InMemoryTaskStore::new();
-        let task = Task::draft(
-            "task_demo_1",
-            ConversationId("conv_demo_1".into()),
-            TaskKind::Feature,
-            "Demo task",
-            "Create a task runtime demo payload",
-            json!({"source": "server-demo"}),
-        );
-
-        let mut task = task;
-        let _ = task.transition_to(TaskStatus::Pending);
-        let _ = store.save_task(task.clone());
-
-        let event = TaskEvent {
-            id: store.next_event_id(&task.id),
-            task_id: task.id.clone(),
-            step_id: None,
-            kind: TaskEventKind::TaskCreated,
-            payload: json!({"status": "pending"}),
-            created_at: String::new(),
+        let mut state = Self {
+            store: InMemoryTaskStore::new(),
         };
-        let _ = store.append_event(event);
-
-        Self { store }
+        let _ = state.run_task("Demo task", "Create a task runtime demo payload");
+        state
     }
 
     pub fn task(&self, task_id: &str) -> Option<Task> {
@@ -53,5 +34,29 @@ impl AppState {
         self.store
             .list_events(&TaskId(task_id.into()))
             .unwrap_or_default()
+    }
+
+    pub fn run_task(&mut self, title: &str, goal: &str) -> Result<Vec<TaskResult>, String> {
+        let planner = SimplePlanner;
+        let plan = planner
+            .create_plan(PlanRequest {
+                title: title.into(),
+                goal: goal.into(),
+                input: json!({ "source": "server-run", "title": title }),
+            })
+            .map_err(|err| err.message)?;
+
+        let tasks = plan.into_tasks(ConversationId("conv_server_demo".into()));
+        let runner = SequentialTaskRunner::default();
+        let mut results = Vec::with_capacity(tasks.len());
+
+        for task in tasks {
+            let result = runner
+                .run_with_store(task, ExecutionContext::default(), &mut self.store)
+                .map_err(|err| err.message)?;
+            results.push(result);
+        }
+
+        Ok(results)
     }
 }
