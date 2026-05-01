@@ -1,3 +1,7 @@
+import { useMemo, useState } from 'react'
+import { TaskPanel } from '../components/TaskPanel'
+import { demoTaskEvents, demoTasks } from '../lib/taskApi'
+
 const queues = [
   { label: '积压', count: 12, active: false },
   { label: '待办', count: 5, active: false },
@@ -30,10 +34,14 @@ const planSteps = [
 const panelClass =
   'rounded-3xl border border-white/10 bg-[#0a0e18]/88 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl'
 
+const selectedTaskDefaultId = demoTasks[0]?.id ?? ''
+
 const ghostButtonClass =
   'rounded-2xl bg-white/6 px-3.5 py-2.5 text-sm text-slate-200 transition hover:-translate-y-0.5 hover:bg-white/10'
 
 function WorkbenchPage() {
+  const [selectedTaskId, setSelectedTaskId] = useState(selectedTaskDefaultId)
+  const taskEvents = useMemo(() => demoTaskEvents, [])
   return (
     <main className="min-h-screen p-4 text-slate-100 md:p-6">
       <div className="grid min-h-[calc(100vh-2rem)] grid-cols-1 gap-4 xl:grid-cols-[280px_360px_minmax(0,1fr)]">
@@ -174,6 +182,13 @@ function WorkbenchPage() {
             />
           </div>
         </section>
+
+        <TaskPanel
+          tasks={demoTasks}
+          selectedTaskId={selectedTaskId}
+          events={taskEvents}
+          onSelectTask={setSelectedTaskId}
+        />
       </div>
     </main>
   )
