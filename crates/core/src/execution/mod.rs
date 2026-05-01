@@ -10,6 +10,7 @@ pub mod runner;
 pub mod search;
 pub mod state;
 pub mod step;
+pub mod store;
 pub mod task;
 pub mod tool;
 pub mod validate;
@@ -25,6 +26,7 @@ pub use runner::{SequentialTaskRunner, TaskRunner};
 pub use search::SearchTool;
 pub use state::{StepTransitionError, TaskTransitionError};
 pub use step::{StepAction, StepId, StepStatus, TaskStep};
+pub use store::{EventStore, InMemoryTaskStore, TaskStore};
 pub use task::{
     AssigneeKind, Task, TaskAssignee, TaskId, TaskKind, TaskPriority, TaskStatus, infer_task_kind,
 };
