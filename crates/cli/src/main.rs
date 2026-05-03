@@ -1,7 +1,9 @@
-use core::{
+use chatbot_core::{
+    auth::{AuthProvider, Credential, CredentialKind},
     conversation::ConversationId,
     execution::{ExecutionContext, InMemoryTaskStore, SequentialTaskRunner, TaskStore},
     planning::{PlanRequest, Planner, SimplePlanner},
+    provider::copilot::CopilotAuthProvider,
 };
 use serde_json::json;
 
@@ -10,12 +12,13 @@ fn main() {
 
     match args.get(1).map(String::as_str) {
         Some("task") => handle_task_command(&args[2..]),
+        Some("auth") => handle_auth_command(&args[2..]),
         _ => print_health(),
     }
 }
 
 fn print_health() {
-    let health = core::health();
+    let health = chatbot_core::health();
     println!(
         "{}",
         serde_json::to_string_pretty(&health).expect("serialize health response")
@@ -36,10 +39,29 @@ fn handle_task_command(args: &[String]) {
             let title = args.get(1).cloned().unwrap_or_else(|| "Ad-hoc task".into());
             task_run(&title);
         }
-        _ => {
-            eprintln!("usage: cli task <list|show|run>");
-        }
+        _ => eprintln!("usage: cli task <list|show|run>"),
     }
+}
+
+fn handle_auth_command(args: &[String]) {
+    match args.first().map(String::as_str) {
+        Some("copilot") => auth_copilot(),
+        _ => eprintln!("usage: cli auth copilot"),
+    }
+}
+
+fn auth_copilot() {
+    let provider = CopilotAuthProvider::default();
+    let session = provider
+        .login(Credential {
+            kind: CredentialKind::DeviceCode,
+            value: "request-device-flow".into(),
+        })
+        .expect("begin copilot auth");
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&session).expect("serialize auth session")
+    );
 }
 
 fn demo_store() -> InMemoryTaskStore {
@@ -75,7 +97,7 @@ fn task_list() {
 fn task_show(task_id: &str) {
     let store = demo_store();
     let task = store
-        .load_task(&core::execution::TaskId(task_id.into()))
+        .load_task(&chatbot_core::execution::TaskId(task_id.into()))
         .expect("load task");
     println!(
         "{}",

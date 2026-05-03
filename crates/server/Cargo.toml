@@ -4,5 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-core = { path = "../core" }
+axum = { version = "0.8", features = ["json"] }
+chatbot_core = { package = "core", path = "../core" }
+serde = { workspace = true }
 serde_json = { workspace = true }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+tower-http = { version = "0.6", features = ["cors"] }

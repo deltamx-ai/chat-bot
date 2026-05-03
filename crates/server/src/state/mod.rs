@@ -1,22 +1,28 @@
-use core::{
+use chatbot_core::{
+    auth::AuthSession,
     conversation::ConversationId,
     execution::{
         EventStore, ExecutionContext, InMemoryTaskStore, SequentialTaskRunner, Task, TaskEvent,
         TaskId, TaskResult, TaskStore,
     },
     planning::{PlanRequest, Planner, SimplePlanner},
+    provider::{ProviderCapability, ProviderKind},
 };
 use serde_json::json;
+
+pub type CopilotAuthState = serde_json::Value;
 
 #[derive(Debug, Default, Clone)]
 pub struct AppState {
     pub store: InMemoryTaskStore,
+    pub copilot_session: Option<AuthSession>,
 }
 
 impl AppState {
     pub fn demo() -> Self {
         let mut state = Self {
             store: InMemoryTaskStore::new(),
+            copilot_session: None,
         };
         let _ = state.run_task("Demo task", "Create a task runtime demo payload");
         state
@@ -58,5 +64,22 @@ impl AppState {
         }
 
         Ok(results)
+    }
+
+    pub fn copilot_auth_state(&self) -> CopilotAuthState {
+        json!({
+          "provider": {
+            "id": "copilot-github",
+            "kind": ProviderKind::Copilot,
+            "enabled": true,
+            "base_url": "https://github.com/login/device",
+            "capabilities": [ProviderCapability::Authentication, ProviderCapability::Chat]
+          },
+          "session": self.copilot_session
+        })
+    }
+
+    pub fn apply_copilot_session(&mut self, session: AuthSession) {
+        self.copilot_session = Some(session);
     }
 }

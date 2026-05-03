@@ -1,4 +1,4 @@
-use super::{AuthSession, Credential};
+use super::{AuthChallenge, AuthSession, Credential};
 
 pub trait AuthProvider {
     fn id(&self) -> &str;
@@ -10,4 +10,6 @@ pub trait AuthProvider {
     fn refresh(&self, session: &AuthSession) -> Result<AuthSession, String>;
 
     fn validate(&self, credential: &Credential) -> Result<(), String>;
+
+    fn begin_device_flow(&self) -> Result<AuthChallenge, String>;
 }

@@ -8,4 +8,4 @@ mod types;
 pub use identity::Identity;
 pub use provider::AuthProvider;
 pub use session::AuthSession;
-pub use types::{AuthMethod, AuthState, Credential, CredentialKind};
+pub use types::{AuthChallenge, AuthMethod, AuthState, Credential, CredentialKind};

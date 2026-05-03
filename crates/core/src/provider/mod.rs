@@ -1,6 +1,7 @@
 //! Provider registry and provider-side integration contracts.
 
 mod config;
+pub mod copilot;
 mod registry;
 mod types;
 

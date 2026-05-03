@@ -1,4 +1,4 @@
-use super::ProviderDescriptor;
+use super::{ProviderDescriptor, copilot::CopilotAuthProvider};
 
 #[derive(Debug, Clone, Default)]
 pub struct ProviderRegistry {
@@ -16,5 +16,9 @@ impl ProviderRegistry {
 
     pub fn all(&self) -> &[ProviderDescriptor] {
         &self.providers
+    }
+
+    pub fn copilot_auth_provider() -> CopilotAuthProvider {
+        CopilotAuthProvider::default()
     }
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{AuthMethod, AuthState, Credential, Identity};
+use super::{AuthChallenge, AuthMethod, AuthState, Credential, Identity};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AuthSession {
@@ -9,4 +9,5 @@ pub struct AuthSession {
     pub state: AuthState,
     pub identity: Option<Identity>,
     pub credentials: Vec<Credential>,
+    pub challenge: Option<AuthChallenge>,
 }
