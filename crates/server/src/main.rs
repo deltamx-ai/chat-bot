@@ -2,10 +2,7 @@ mod bootstrap;
 mod routes;
 mod state;
 
-use std::{
-    sync::{Arc, Mutex},
-    time::Instant,
-};
+use std::sync::{Arc, Mutex};
 
 use axum::{
     Json, Router,
