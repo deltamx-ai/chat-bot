@@ -19,6 +19,6 @@ impl ProviderRegistry {
     }
 
     pub fn copilot_auth_provider() -> CopilotAuthProvider {
-        CopilotAuthProvider::default()
+        CopilotAuthProvider
     }
 }

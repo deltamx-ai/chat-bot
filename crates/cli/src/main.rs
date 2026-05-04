@@ -52,7 +52,7 @@ async fn handle_auth_command(args: &[String]) {
 }
 
 async fn auth_copilot() {
-    let provider = CopilotAuthProvider::default();
+    let provider = CopilotAuthProvider;
     match provider.request_device_code_async().await {
         Ok(challenge) => {
             if let Ok(mut clipboard) = Clipboard::new() {

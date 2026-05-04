@@ -100,7 +100,7 @@ async fn copilot_auth_handler(State(state): State<SharedState>) -> impl IntoResp
 }
 
 async fn begin_copilot_auth_handler(State(state): State<SharedState>) -> impl IntoResponse {
-    let provider = chatbot_core::provider::copilot::CopilotAuthProvider::default();
+    let provider = chatbot_core::provider::copilot::CopilotAuthProvider;
     match provider.request_device_code_async().await {
         Ok(challenge) => {
             let session = chatbot_core::auth::AuthSession {

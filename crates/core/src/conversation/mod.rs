@@ -1,6 +1,11 @@
-//! Conversation models, lifecycle, and session-scoped options.
+//! Conversation models, lifecycle, message handling, and session-scoped options.
 
-use serde::{Deserialize, Serialize};
+mod message;
+mod service;
+mod store;
+mod types;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ConversationId(pub String);
+pub use message::{Message, MessageId, MessageRole};
+pub use service::ConversationService;
+pub use store::{ConversationStore, InMemoryConversationStore, MessageStore};
+pub use types::{Conversation, ConversationId, ConversationStatus};
