@@ -1,6 +1,6 @@
-import useSWR from 'swr'
+import { mutate } from 'swr'
 
-import { httpClient } from './http'
+import { useGetSWR, usePostSWR } from '../hooks/useSwrRequest'
 
 export interface AuthChallengeDto {
   provider_id: string
@@ -36,6 +36,7 @@ export interface BeginCopilotAuthResultDto {
   ok: boolean
   session?: AuthSessionDto
   error?: string
+  elapsed_ms?: number
 }
 
 function isAuthStateLike(payload: unknown): payload is CopilotAuthStateDto {
@@ -43,13 +44,47 @@ function isAuthStateLike(payload: unknown): payload is CopilotAuthStateDto {
 }
 
 export function useCopilotAuthState() {
-  const query = useSWR<unknown>('/api/auth/copilot')
+  const query = useGetSWR<unknown, CopilotAuthStateDto | null>('/api/auth/copilot', {
+    fallbackData: null,
+    normalize: (payload) => (isAuthStateLike(payload) ? payload : null),
+  })
+
   return {
     ...query,
-    authState: isAuthStateLike(query.data) ? query.data : null,
+    authState: query.data,
   }
 }
 
-export async function beginCopilotAuth() {
-  return httpClient.post<BeginCopilotAuthResultDto>('/api/auth/copilot/begin')
+export function useBeginCopilotAuth() {
+  const request = usePostSWR<BeginCopilotAuthResultDto>('/api/auth/copilot/begin')
+
+  const begin = async () => {
+    const result = await request.post()
+    if (result.session) {
+      await mutate('/api/auth/copilot', (current: unknown) => {
+        if (isAuthStateLike(current)) {
+          return {
+            ...current,
+            session: result.session,
+          }
+        }
+        return {
+          provider: {
+            id: 'copilot-github',
+            kind: 'Copilot',
+            enabled: true,
+            base_url: result.session.challenge?.verification_uri ?? 'https://github.com/login/device',
+            capabilities: ['Authentication', 'Chat'],
+          },
+          session: result.session,
+        }
+      }, false)
+    }
+    return result
+  }
+
+  return {
+    ...request,
+    begin,
+  }
 }

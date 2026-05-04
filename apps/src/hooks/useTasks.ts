@@ -1,7 +1,6 @@
-import useSWR from 'swr'
-
 import type { TaskDto, TaskEventDto } from '../lib/taskApi'
 import { demoTaskEvents, demoTasks } from '../lib/taskApi'
+import { useGetSWR } from './useSwrRequest'
 
 function normalizeTasks(payload: unknown): TaskDto[] {
   if (Array.isArray(payload)) return payload as TaskDto[]
@@ -30,20 +29,26 @@ function normalizeEvents(payload: unknown, taskId: string): TaskEventDto[] {
 }
 
 export function useTasks() {
-  const query = useSWR<unknown>('/api/tasks')
+  const query = useGetSWR<unknown, TaskDto[]>('/api/tasks', {
+    fallbackData: demoTasks,
+    normalize: normalizeTasks,
+  })
 
   return {
     ...query,
-    tasks: normalizeTasks(query.data),
+    tasks: query.data ?? demoTasks,
   }
 }
 
 export function useTaskEvents(taskId: string) {
   const key = taskId ? `/api/tasks/${taskId}/events` : null
-  const query = useSWR<unknown>(key)
+  const query = useGetSWR<unknown, TaskEventDto[]>(key, {
+    fallbackData: demoTaskEvents.filter((event) => event.taskId === taskId),
+    normalize: (payload) => normalizeEvents(payload, taskId),
+  })
 
   return {
     ...query,
-    events: normalizeEvents(query.data, taskId),
+    events: query.data ?? demoTaskEvents.filter((event) => event.taskId === taskId),
   }
 }

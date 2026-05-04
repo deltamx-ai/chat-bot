@@ -1,5 +1,5 @@
+use arboard::Clipboard;
 use chatbot_core::{
-    auth::{AuthProvider, Credential, CredentialKind},
     conversation::ConversationId,
     execution::{ExecutionContext, InMemoryTaskStore, SequentialTaskRunner, TaskStore},
     planning::{PlanRequest, Planner, SimplePlanner},
@@ -7,12 +7,13 @@ use chatbot_core::{
 };
 use serde_json::json;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     match args.get(1).map(String::as_str) {
         Some("task") => handle_task_command(&args[2..]),
-        Some("auth") => handle_auth_command(&args[2..]),
+        Some("auth") => handle_auth_command(&args[2..]).await,
         _ => print_health(),
     }
 }
@@ -43,25 +44,47 @@ fn handle_task_command(args: &[String]) {
     }
 }
 
-fn handle_auth_command(args: &[String]) {
+async fn handle_auth_command(args: &[String]) {
     match args.first().map(String::as_str) {
-        Some("copilot") => auth_copilot(),
+        Some("copilot") => auth_copilot().await,
         _ => eprintln!("usage: cli auth copilot"),
     }
 }
 
-fn auth_copilot() {
+async fn auth_copilot() {
     let provider = CopilotAuthProvider::default();
-    let session = provider
-        .login(Credential {
-            kind: CredentialKind::DeviceCode,
-            value: "request-device-flow".into(),
-        })
-        .expect("begin copilot auth");
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&session).expect("serialize auth session")
-    );
+    match provider.request_device_code_async().await {
+        Ok(challenge) => {
+            if let Ok(mut clipboard) = Clipboard::new() {
+                let _ = clipboard.set_text(challenge.user_code.clone());
+            }
+
+            let _ = open::that(challenge.verification_uri.clone());
+
+            println!("Copilot GitHub device flow started.");
+            println!("Opened browser: {}", challenge.verification_uri);
+            println!("Copied user code to clipboard: {}", challenge.user_code);
+            println!("Waiting for authorization...\n");
+
+            match provider.poll_access_token(&challenge) {
+                Ok(session) => {
+                    println!("Authentication succeeded.\n");
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&session).expect("serialize auth session")
+                    );
+                }
+                Err(error) => {
+                    eprintln!("auth failed: {error}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        Err(error) => {
+            eprintln!("auth failed: {error}");
+            std::process::exit(1);
+        }
+    }
 }
 
 fn demo_store() -> InMemoryTaskStore {

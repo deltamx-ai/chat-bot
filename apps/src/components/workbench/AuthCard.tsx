@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { beginCopilotAuth, useCopilotAuthState, type AuthSessionDto } from '../../lib/authApi'
+import { useBeginCopilotAuth, useCopilotAuthState, type AuthSessionDto } from '../../lib/authApi'
 
 async function copyText(text: string) {
   if (navigator.clipboard?.writeText) {
@@ -18,10 +18,11 @@ export function AuthCard() {
   const { authState } = useCopilotAuthState()
   const [copied, setCopied] = useState<string | null>(null)
   const [manualSession, setManualSession] = useState<AuthSessionDto | null>(null)
-  const [pending, setPending] = useState(false)
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null)
+  const { begin, isSubmitting } = useBeginCopilotAuth()
 
-  const session = authState?.session ?? manualSession
-  const challenge = session?.challenge
+  const session = manualSession ?? authState?.session ?? null
+  const challenge = session?.challenge ?? null
 
   return (
     <div className="rounded-2xl border border-white/10 bg-[#090d18] p-4">
@@ -32,21 +33,17 @@ export function AuthCard() {
         </div>
         <button
           type="button"
-          disabled={pending}
+          disabled={isSubmitting}
           onClick={async () => {
-            setPending(true)
-            try {
-              const result = await beginCopilotAuth()
-              if (result.session) {
-                setManualSession(result.session)
-              }
-            } finally {
-              setPending(false)
+            const result = await begin()
+            setElapsedMs(result.elapsed_ms ?? null)
+            if (result.session) {
+              setManualSession(result.session)
             }
           }}
           className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-3 py-2 text-sm text-violet-200 transition hover:brightness-110 disabled:opacity-60"
         >
-          {pending ? '请求中...' : '发起认证'}
+          {isSubmitting ? '请求中...' : '发起认证'}
         </button>
       </div>
 
@@ -87,7 +84,10 @@ export function AuthCard() {
               打开浏览器
             </button>
           </div>
-          {copied ? <div className="text-xs text-emerald-300">已复制 {copied}</div> : null}
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            {copied ? <span className="text-emerald-300">已复制 {copied}</span> : null}
+            {elapsedMs !== null ? <span>获取耗时 {elapsedMs}ms</span> : null}
+          </div>
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-xs text-slate-500">

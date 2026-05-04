@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+arboard = "3"
 chatbot_core = { package = "core", path = "../core" }
+open = "5"
 serde_json = { workspace = true }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
