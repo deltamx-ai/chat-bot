@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use chatbot_core::{
-    conversation::ConversationId,
+    conversation::{ConversationId, MessageAttachment},
     execution::{ExecutionContext, InMemoryTaskStore, SequentialTaskRunner, TaskStore},
     planning::{PlanRequest, Planner, SimplePlanner},
     provider::copilot::CopilotAuthProvider,
@@ -12,39 +12,13 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     match args.get(1).map(String::as_str) {
-        Some("task") => handle_task_command(&args[2..]),
-        Some("auth") => handle_auth_command(&args[2..]).await,
-        _ => print_health(),
+        Some("message") => message_command(&args[2..]).await,
+        Some("auth") => auth_command(&args[2..]).await,
+        _ => println!("usage: cli <message|auth> ..."),
     }
 }
 
-fn print_health() {
-    let health = chatbot_core::health();
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&health).expect("serialize health response")
-    );
-}
-
-fn handle_task_command(args: &[String]) {
-    match args.first().map(String::as_str) {
-        Some("list") => task_list(),
-        Some("show") => {
-            if let Some(task_id) = args.get(1) {
-                task_show(task_id);
-            } else {
-                eprintln!("usage: cli task show <task-id>");
-            }
-        }
-        Some("run") => {
-            let title = args.get(1).cloned().unwrap_or_else(|| "Ad-hoc task".into());
-            task_run(&title);
-        }
-        _ => eprintln!("usage: cli task <list|show|run>"),
-    }
-}
-
-async fn handle_auth_command(args: &[String]) {
+async fn auth_command(args: &[String]) {
     match args.first().map(String::as_str) {
         Some("copilot") => auth_copilot().await,
         _ => eprintln!("usage: cli auth copilot"),
@@ -58,33 +32,94 @@ async fn auth_copilot() {
             if let Ok(mut clipboard) = Clipboard::new() {
                 let _ = clipboard.set_text(challenge.user_code.clone());
             }
-
             let _ = open::that(challenge.verification_uri.clone());
-
-            println!("Copilot GitHub device flow started.");
             println!("Opened browser: {}", challenge.verification_uri);
-            println!("Copied user code to clipboard: {}", challenge.user_code);
-            println!("Waiting for authorization...\n");
-
-            match provider.poll_access_token(&challenge) {
-                Ok(session) => {
-                    println!("Authentication succeeded.\n");
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(&session).expect("serialize auth session")
-                    );
-                }
-                Err(error) => {
-                    eprintln!("auth failed: {error}");
-                    std::process::exit(1);
-                }
-            }
+            println!("Copied code: {}", challenge.user_code);
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&challenge).expect("serialize challenge")
+            );
         }
         Err(error) => {
             eprintln!("auth failed: {error}");
             std::process::exit(1);
         }
     }
+}
+
+async fn message_command(args: &[String]) {
+    if args.is_empty() {
+        eprintln!("usage: cli message <content> [--model MODEL] [--file PATH]...");
+        return;
+    }
+
+    let content = args[0].clone();
+    let mut model_id: Option<String> = None;
+    let mut files: Vec<String> = Vec::new();
+    let mut index = 1;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--model" => {
+                if let Some(value) = args.get(index + 1) {
+                    model_id = Some(value.clone());
+                    index += 2;
+                } else {
+                    eprintln!("--model needs a value");
+                    return;
+                }
+            }
+            "--file" => {
+                if let Some(value) = args.get(index + 1) {
+                    files.push(value.clone());
+                    index += 2;
+                } else {
+                    eprintln!("--file needs a path");
+                    return;
+                }
+            }
+            _ => {
+                index += 1;
+            }
+        }
+    }
+
+    let attachments: Vec<MessageAttachment> = files
+        .iter()
+        .enumerate()
+        .map(|(i, path)| MessageAttachment {
+            id: format!("cli_file_{}", i + 1),
+            name: std::path::Path::new(path)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or(path)
+                .to_string(),
+            kind: "file".into(),
+            mime_type: None,
+            path: Some(path.clone()),
+            size_bytes: std::fs::metadata(path).ok().map(|meta| meta.len()),
+        })
+        .collect();
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://127.0.0.1:8787/api/messages")
+        .json(&json!({
+            "conversation_id": "conv_cli_message",
+            "content": content,
+            "model_id": model_id,
+            "attachments": attachments,
+        }))
+        .send()
+        .await
+        .expect("send message request")
+        .json::<serde_json::Value>()
+        .await
+        .expect("deserialize message response");
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&response).expect("serialize response")
+    );
 }
 
 fn demo_store() -> InMemoryTaskStore {
@@ -108,6 +143,7 @@ fn demo_store() -> InMemoryTaskStore {
     store
 }
 
+#[allow(dead_code)]
 fn task_list() {
     let store = demo_store();
     let tasks = store.list_tasks().expect("list tasks");
@@ -115,38 +151,4 @@ fn task_list() {
         "{}",
         serde_json::to_string_pretty(&tasks).expect("serialize task list")
     );
-}
-
-fn task_show(task_id: &str) {
-    let store = demo_store();
-    let task = store
-        .load_task(&chatbot_core::execution::TaskId(task_id.into()))
-        .expect("load task");
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&task).expect("serialize task detail")
-    );
-}
-
-fn task_run(title: &str) {
-    let planner = SimplePlanner;
-    let plan = planner
-        .create_plan(PlanRequest {
-            title: title.into(),
-            goal: format!("Run task from CLI: {title}"),
-            input: json!({ "source": "cli-run", "title": title }),
-        })
-        .expect("create plan");
-
-    let tasks = plan.into_tasks(ConversationId("conv_cli_run".into()));
-    let runner = SequentialTaskRunner::default();
-    let mut store = InMemoryTaskStore::new();
-
-    for task in tasks {
-        let result = runner.run_with_store(task, ExecutionContext::default(), &mut store);
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&result).expect("serialize run result")
-        );
-    }
 }

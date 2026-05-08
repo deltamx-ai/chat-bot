@@ -8,3 +8,16 @@ pub trait Tool: Send + Sync {
     fn input_schema(&self) -> Value;
     fn call(&self, ctx: ExecutionContext, input: Value) -> Result<ToolOutput, ToolError>;
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConfirmationPolicy {
+    Never,
+    OnWrite,
+    Always,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InputMode {
+    None,
+    Stdin,
+}

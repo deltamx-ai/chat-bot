@@ -1,6 +1,6 @@
 use super::{
-    Conversation, ConversationId, ConversationStatus, ConversationStore, Message, MessageId,
-    MessageRole, MessageStore,
+    Conversation, ConversationId, ConversationStatus, ConversationStore, Message,
+    MessageAttachment, MessageId, MessageRole, MessageStore,
 };
 
 pub struct ConversationService;
@@ -28,12 +28,16 @@ impl ConversationService {
         conversation_id: ConversationId,
         message_id: impl Into<String>,
         content: impl Into<String>,
+        model_id: Option<String>,
+        attachments: Vec<MessageAttachment>,
     ) -> Result<Message, String> {
         let message = Message {
             id: MessageId(message_id.into()),
             conversation_id,
             role: MessageRole::User,
             content: content.into(),
+            model_id,
+            attachments,
             created_at: String::new(),
         };
         store.append_message(message.clone())?;
@@ -45,12 +49,16 @@ impl ConversationService {
         conversation_id: ConversationId,
         message_id: impl Into<String>,
         content: impl Into<String>,
+        model_id: Option<String>,
+        attachments: Vec<MessageAttachment>,
     ) -> Result<Message, String> {
         let message = Message {
             id: MessageId(message_id.into()),
             conversation_id,
             role: MessageRole::Assistant,
             content: content.into(),
+            model_id,
+            attachments,
             created_at: String::new(),
         };
         store.append_message(message.clone())?;

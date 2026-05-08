@@ -13,6 +13,7 @@ pub enum StepAction {
     Write,
     Validate,
     Plan,
+    Shell,
     Custom(String),
 }
 
@@ -21,6 +22,8 @@ pub enum StepStatus {
     Pending,
     Ready,
     Running,
+    AwaitingConfirmation,
+    AwaitingInput,
     Succeeded,
     Failed,
     Skipped,

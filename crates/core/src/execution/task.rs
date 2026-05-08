@@ -131,6 +131,7 @@ pub fn infer_task_kind(action: &StepAction) -> TaskKind {
         StepAction::Write => TaskKind::Write,
         StepAction::Validate => TaskKind::Validate,
         StepAction::Plan => TaskKind::Feature,
+        StepAction::Shell => TaskKind::Feature,
         StepAction::Custom(kind) => TaskKind::Custom(kind.clone()),
     }
 }

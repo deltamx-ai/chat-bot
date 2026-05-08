@@ -34,13 +34,23 @@ export class HttpClient {
     })
   }
 
+  async postFormData<T>(path: string, formData: FormData): Promise<T> {
+    return this.request<T>(path, {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    })
+  }
+
   private async request<T>(path: string, init: RequestInit): Promise<T> {
+    const headers = init.body instanceof FormData ? init.headers ?? {} : {
+      'Content-Type': 'application/json',
+      ...(init.headers ?? {}),
+    }
+
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init.headers ?? {}),
-      },
+      headers,
     })
 
     const text = await response.text()

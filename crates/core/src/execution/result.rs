@@ -31,3 +31,11 @@ pub struct ToolError {
     pub code: String,
     pub message: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ShellOutput {
+    pub stdout: String,
+    pub stderr: String,
+    pub exit_code: i32,
+    pub success: bool,
+}

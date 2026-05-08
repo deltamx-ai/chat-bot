@@ -1,4 +1,4 @@
-use super::{InMemoryToolRouter, ReadTool, SearchTool, Tool, ValidateTool, WriteTool};
+use super::{InMemoryToolRouter, ReadTool, SearchTool, ShellTool, Tool, ValidateTool, WriteTool};
 
 pub struct ToolRegistry;
 
@@ -15,6 +15,7 @@ impl ToolRegistry {
         Self::with_tools(vec![
             Box::new(ReadTool),
             Box::new(SearchTool),
+            Box::new(ShellTool),
             Box::new(WriteTool),
             Box::new(ValidateTool),
         ])

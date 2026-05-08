@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Multipart, Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -16,7 +16,7 @@ use serde::Deserialize;
 use serde_json::json;
 use tower_http::cors::CorsLayer;
 
-use crate::state::AppState;
+use crate::state::{AppState, SendMessageRequest};
 
 type SharedState = Arc<Mutex<AppState>>;
 
@@ -37,6 +37,14 @@ async fn main() {
         .route("/api/tasks/{task_id}/events", get(task_events_handler))
         .route("/api/auth/copilot", get(copilot_auth_handler))
         .route("/api/auth/copilot/begin", post(begin_copilot_auth_handler))
+        .route("/api/models", get(models_handler))
+        .route("/api/conversations", get(conversations_handler))
+        .route(
+            "/api/conversations/{conversation_id}/messages",
+            get(messages_handler),
+        )
+        .route("/api/messages", post(send_message_handler))
+        .route("/api/uploads", post(upload_file_handler))
         .with_state(state)
         .layer(CorsLayer::permissive());
 
@@ -124,6 +132,113 @@ async fn begin_copilot_auth_handler(State(state): State<SharedState>) -> impl In
             )
                 .into_response()
         }
+        Err(message) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "ok": false, "error": message })),
+        )
+            .into_response(),
+    }
+}
+
+async fn models_handler(State(state): State<SharedState>) -> impl IntoResponse {
+    let state = state.lock().expect("lock state");
+    Json(state.models())
+}
+
+async fn conversations_handler(State(state): State<SharedState>) -> impl IntoResponse {
+    let state = state.lock().expect("lock state");
+    Json(state.list_conversations())
+}
+
+async fn messages_handler(
+    State(state): State<SharedState>,
+    Path(conversation_id): Path<String>,
+) -> impl IntoResponse {
+    let state = state.lock().expect("lock state");
+    Json(state.list_messages(&conversation_id))
+}
+
+async fn upload_file_handler(
+    State(_state): State<SharedState>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut uploaded = Vec::new();
+    let upload_dir = std::path::Path::new("/tmp/chat-bot-uploads");
+    if let Err(error) = tokio::fs::create_dir_all(upload_dir).await {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "ok": false, "error": error.to_string() })),
+        )
+            .into_response();
+    }
+
+    while let Ok(Some(field)) = multipart.next_field().await {
+        let file_name = field
+            .file_name()
+            .map(ToString::to_string)
+            .unwrap_or_else(|| "upload.bin".into());
+        let content_type = field.content_type().map(ToString::to_string);
+        let data: bytes::Bytes = match field.bytes().await {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({ "ok": false, "error": error.to_string() })),
+                )
+                    .into_response();
+            }
+        };
+        let safe_name = format!("{}-{}", uuid_like(), file_name.replace('/', "_"));
+        let path = upload_dir.join(&safe_name);
+        if let Err(error) = tokio::fs::write(&path, &data).await {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "ok": false, "error": error.to_string() })),
+            )
+                .into_response();
+        }
+        let kind = if content_type
+            .as_deref()
+            .unwrap_or("application/octet-stream")
+            .starts_with("image/")
+        {
+            "image"
+        } else {
+            "file"
+        };
+        uploaded.push(json!({
+            "id": safe_name,
+            "name": file_name,
+            "kind": kind,
+            "mime_type": content_type,
+            "path": path.display().to_string(),
+            "size_bytes": data.len(),
+        }));
+    }
+
+    (
+        StatusCode::OK,
+        Json(json!({ "ok": true, "files": uploaded })),
+    )
+        .into_response()
+}
+
+fn uuid_like() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    format!("upload-{now}")
+}
+
+async fn send_message_handler(
+    State(state): State<SharedState>,
+    Json(payload): Json<SendMessageRequest>,
+) -> impl IntoResponse {
+    let mut state = state.lock().expect("lock state");
+    match state.send_message(payload) {
+        Ok(response) => (StatusCode::OK, Json(json!(response))).into_response(),
         Err(message) => (
             StatusCode::BAD_REQUEST,
             Json(json!({ "ok": false, "error": message })),

@@ -7,13 +7,19 @@ import { useTaskUiStore } from '../store/taskUiStore'
 import { ConversationList } from '../components/workbench/ConversationList'
 import { Sidebar } from '../components/workbench/Sidebar'
 import { TaskWorkspace } from '../components/workbench/TaskWorkspace'
+import { useConversations, useMessages, useModels, useSendMessage } from '../lib/messageApi'
 
 function WorkbenchPage() {
   const { tasks } = useTasks()
+  const { conversations } = useConversations()
+  const { models } = useModels()
+  const { post, isSubmitting } = useSendMessage()
   const selectedTaskId = useTaskUiStore((state) => state.selectedTaskId)
   const setSelectedTaskId = useTaskUiStore((state) => state.setSelectedTaskId)
   const activeTaskId = selectedTaskId || tasks[0]?.id || ''
+  const activeConversationId = conversations[0]?.id || 'conv_default'
   const { events } = useTaskEvents(activeTaskId)
+  const { messages } = useMessages(activeConversationId)
   const { message, clear } = useGlobalErrorToast()
   const selectedTask = useMemo(
     () => tasks.find((task) => task.id === activeTaskId) ?? tasks[0],
@@ -29,7 +35,15 @@ function WorkbenchPage() {
           selectedTaskId={activeTaskId}
           onSelectTask={setSelectedTaskId}
         />
-        <TaskWorkspace task={selectedTask} events={events} />
+        <TaskWorkspace
+          task={selectedTask}
+          events={events}
+          messages={messages}
+          models={models}
+          conversationId={activeConversationId}
+          onSendMessage={post}
+          isSendingMessage={isSubmitting}
+        />
       </div>
 
       <GlobalErrorToast message={message} onClose={clear} />

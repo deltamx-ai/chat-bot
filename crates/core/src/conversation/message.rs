@@ -14,10 +14,22 @@ pub enum MessageRole {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MessageAttachment {
+    pub id: String,
+    pub name: String,
+    pub kind: String,
+    pub mime_type: Option<String>,
+    pub path: Option<String>,
+    pub size_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Message {
     pub id: MessageId,
     pub conversation_id: ConversationId,
     pub role: MessageRole,
     pub content: String,
+    pub model_id: Option<String>,
+    pub attachments: Vec<MessageAttachment>,
     pub created_at: String,
 }

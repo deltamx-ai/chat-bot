@@ -1,13 +1,32 @@
 import { AuthCard } from './AuthCard'
+import { ComposerPanel } from './ComposerPanel'
 
 import type { TaskDto, TaskEventDto } from '../../lib/taskApi'
+import type { MessageDto, ModelConfigDto, SendMessageResponseDto } from '../../lib/messageApi'
 
 interface TaskWorkspaceProps {
   task?: TaskDto
   events: TaskEventDto[]
+  messages: MessageDto[]
+  models: ModelConfigDto[]
+  conversationId: string
+  onSendMessage: (payload: {
+    conversation_id: string
+    content: string
+    model_id?: string | null
+    attachments: Array<{
+      id: string
+      name: string
+      kind: string
+      mime_type?: string | null
+      path?: string | null
+      size_bytes?: number | null
+    }>
+  }) => Promise<SendMessageResponseDto>
+  isSendingMessage: boolean
 }
 
-export function TaskWorkspace({ task, events }: TaskWorkspaceProps) {
+export function TaskWorkspace({ task, events, messages, models, conversationId, onSendMessage, isSendingMessage }: TaskWorkspaceProps) {
   if (!task) {
     return (
       <section className="rounded-[28px] border border-white/10 bg-[#060913] p-6 text-slate-400">
@@ -35,22 +54,25 @@ export function TaskWorkspace({ task, events }: TaskWorkspaceProps) {
 
       <div className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="rounded-3xl border border-white/10 bg-[#080b14] p-5">
-          <div className="mb-4 text-sm text-emerald-300">Plan</div>
-          <div className="rounded-3xl border border-white/10 bg-[#05070f] p-6">
-            <h3 className="text-[32px] font-semibold text-white">{task.goal}</h3>
-            <div className="mt-6 space-y-5 text-lg leading-9 text-slate-200">
-              {task.steps.map((step, index) => (
-                <div key={step.id} className="flex gap-4">
-                  <div className="w-8 text-slate-500">{index + 1}.</div>
-                  <div>
-                    <div>{step.title}</div>
-                    <div className="mt-1 text-sm text-slate-500">
-                      {step.action} · {step.toolName} · {step.status}
-                    </div>
-                  </div>
+          <div className="mb-4 text-sm text-emerald-300">Messages</div>
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div key={message.id} className="rounded-2xl border border-white/10 bg-[#05070f] p-4">
+                <div className="mb-2 text-xs text-slate-500">
+                  {message.role} · {message.model_id ?? '未指定模型'}
                 </div>
-              ))}
-            </div>
+                <div className="text-sm leading-7 text-slate-100">{message.content}</div>
+                {message.attachments.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+                    {message.attachments.map((attachment) => (
+                      <span key={attachment.id} className="rounded-full border border-white/10 px-3 py-1">
+                        {attachment.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ))}
           </div>
 
           <div className="mt-6 rounded-2xl border border-white/10 bg-[#090d18] p-4 text-sm text-slate-400">
@@ -82,25 +104,12 @@ export function TaskWorkspace({ task, events }: TaskWorkspaceProps) {
         </div>
       </div>
 
-      <div className="mt-auto flex items-center gap-3 px-2 text-sm text-slate-500">
-        <span>思考中...</span>
-        <span>{events.length}s</span>
-      </div>
-
-      <div className="mt-4 rounded-3xl border border-white/10 bg-[#070a12]/90 p-4">
-        <div className="mb-4 flex items-center gap-3">
-          <button className="rounded-full border border-violet-400/40 bg-violet-500/10 px-4 py-2 text-sm text-violet-200 transition hover:brightness-110">
-            执行
-          </button>
-          <button className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white">
-            待办
-          </button>
-        </div>
-        <textarea
-          className="min-h-40 w-full resize-none rounded-3xl border border-white/10 bg-[#04060d] px-4 py-4 text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-400/60"
-          placeholder="按 Shift + Return 执行"
-        />
-      </div>
+      <ComposerPanel
+        conversationId={conversationId}
+        models={models}
+        onSend={onSendMessage}
+        isSubmitting={isSendingMessage}
+      />
     </section>
   )
 }
