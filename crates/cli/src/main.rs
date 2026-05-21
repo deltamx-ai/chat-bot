@@ -3,7 +3,7 @@ use chatbot_core::{
     conversation::{ConversationId, MessageAttachment},
     execution::{ExecutionContext, InMemoryTaskStore, SequentialTaskRunner, TaskStore},
     planning::{PlanRequest, Planner, SimplePlanner},
-    provider::copilot::CopilotAuthProvider,
+    provider::copilot::CopilotAuthClient,
 };
 use serde_json::json;
 
@@ -26,18 +26,24 @@ async fn auth_command(args: &[String]) {
 }
 
 async fn auth_copilot() {
-    let provider = CopilotAuthProvider;
-    match provider.request_device_code_async().await {
-        Ok(challenge) => {
+    let client = match CopilotAuthClient::new() {
+        Ok(client) => client,
+        Err(error) => {
+            eprintln!("auth failed: {error}");
+            std::process::exit(1);
+        }
+    };
+    match client.request_device_code().await {
+        Ok(grant) => {
             if let Ok(mut clipboard) = Clipboard::new() {
-                let _ = clipboard.set_text(challenge.user_code.clone());
+                let _ = clipboard.set_text(grant.challenge.user_code.clone());
             }
-            let _ = open::that(challenge.verification_uri.clone());
-            println!("Opened browser: {}", challenge.verification_uri);
-            println!("Copied code: {}", challenge.user_code);
+            let _ = open::that(grant.challenge.verification_uri.clone());
+            println!("Opened browser: {}", grant.challenge.verification_uri);
+            println!("Copied code: {}", grant.challenge.user_code);
             println!(
                 "{}",
-                serde_json::to_string_pretty(&challenge).expect("serialize challenge")
+                serde_json::to_string_pretty(&grant.challenge).expect("serialize challenge")
             );
         }
         Err(error) => {
