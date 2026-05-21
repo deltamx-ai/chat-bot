@@ -1,19 +1,37 @@
-use std::{thread, time::Duration};
+use std::sync::OnceLock;
 
-use reqwest::Client;
+use chrono::{DateTime, Duration as ChronoDuration, Utc};
+use reqwest::{Client, StatusCode};
 use serde::Deserialize;
 
-use crate::auth::{
-    AuthChallenge, AuthMethod, AuthProvider, AuthSession, AuthState, Credential, CredentialKind,
-};
+use crate::auth::{AuthChallenge, AuthError, Identity};
 
 const GITHUB_DEVICE_CODE_URL: &str = "https://github.com/login/device/code";
 const GITHUB_ACCESS_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
-const GITHUB_DEVICE_VERIFY_URL: &str = "https://github.com/login/device";
-pub const COPILOT_CLIENT_ID: &str = "Iv1.b507a08c87ecfe98";
+pub const GITHUB_DEVICE_VERIFY_URL: &str = "https://github.com/login/device";
+const GITHUB_USER_URL: &str = "https://api.github.com/user";
+const COPILOT_TOKEN_URL: &str = "https://api.github.com/copilot_internal/v2/token";
 
-#[derive(Debug, Deserialize)]
-struct GitHubDeviceCodeResponse {
+pub const COPILOT_CLIENT_ID: &str = "Iv1.b507a08c87ecfe98";
+pub const COPILOT_OAUTH_SCOPE: &str = "read:user";
+const USER_AGENT: &str = "chat-bot/0.1";
+pub const PROVIDER_ID: &str = "copilot-github";
+
+#[derive(Debug, Clone)]
+pub struct DeviceCodeGrant {
+    pub device_code: String,
+    pub challenge: AuthChallenge,
+}
+
+#[derive(Debug, Clone)]
+pub struct CopilotToken {
+    pub token: String,
+    pub expires_at: DateTime<Utc>,
+    pub refresh_in: ChronoDuration,
+}
+
+#[derive(Deserialize)]
+struct DeviceCodeBody {
     device_code: String,
     user_code: String,
     verification_uri: String,
@@ -21,174 +39,192 @@ struct GitHubDeviceCodeResponse {
     interval: u64,
 }
 
-#[derive(Debug, Deserialize)]
-struct GitHubAccessTokenResponse {
+#[derive(Deserialize)]
+struct AccessTokenBody {
     access_token: Option<String>,
-    _token_type: Option<String>,
-    _scope: Option<String>,
     error: Option<String>,
     error_description: Option<String>,
 }
 
-pub struct CopilotAuthProvider;
+#[derive(Deserialize)]
+struct CopilotTokenBody {
+    token: String,
+    expires_at: i64,
+    refresh_in: i64,
+}
 
-impl CopilotAuthProvider {
-    pub fn new() -> Self {
-        Self
+#[derive(Deserialize)]
+struct UserBody {
+    id: u64,
+    login: String,
+    name: Option<String>,
+    email: Option<String>,
+}
+
+pub struct CopilotAuthClient {
+    http: Client,
+}
+
+impl CopilotAuthClient {
+    pub fn new() -> Result<Self, AuthError> {
+        let http = Client::builder()
+            .user_agent(USER_AGENT)
+            .https_only(true)
+            .build()
+            .map_err(|err| AuthError::Other(format!("build http client: {err}")))?;
+        Ok(Self { http })
     }
 
-    pub async fn request_device_code_async(&self) -> Result<AuthChallenge, String> {
-        let client = Client::new();
-        let response = client
+    pub fn shared() -> Result<&'static Self, AuthError> {
+        static CLIENT: OnceLock<CopilotAuthClient> = OnceLock::new();
+        if let Some(client) = CLIENT.get() {
+            return Ok(client);
+        }
+        let built = Self::new()?;
+        let _ = CLIENT.set(built);
+        CLIENT
+            .get()
+            .ok_or_else(|| AuthError::Other("copilot http client init race".into()))
+    }
+
+    pub async fn request_device_code(&self) -> Result<DeviceCodeGrant, AuthError> {
+        let response = self
+            .http
             .post(GITHUB_DEVICE_CODE_URL)
             .header("Accept", "application/json")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .form(&[("client_id", COPILOT_CLIENT_ID), ("scope", "read:email")])
+            .form(&[
+                ("client_id", COPILOT_CLIENT_ID),
+                ("scope", COPILOT_OAUTH_SCOPE),
+            ])
             .send()
-            .await
-            .map_err(|err| format!("device code request failed: {err}"))?;
+            .await?;
 
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(format!("device code request failed: {status} {body}"));
+            return Err(AuthError::Http { status, body });
         }
 
-        let payload: GitHubDeviceCodeResponse = response
-            .json()
-            .await
-            .map_err(|err| format!("invalid device code response: {err}"))?;
+        let body: DeviceCodeBody = response.json().await?;
 
-        Ok(AuthChallenge {
-            provider_id: self.id().into(),
+        let challenge = AuthChallenge {
+            provider_id: PROVIDER_ID.into(),
             auth_url: GITHUB_DEVICE_VERIFY_URL.into(),
-            user_code: payload.user_code,
-            device_code: payload.device_code,
-            verification_uri: payload.verification_uri,
-            expires_in_seconds: payload.expires_in,
-            poll_interval_seconds: payload.interval,
+            user_code: body.user_code,
+            device_code: String::new(),
+            verification_uri: body.verification_uri,
+            expires_in_seconds: body.expires_in,
+            poll_interval_seconds: body.interval.max(1),
             can_copy_code: true,
             can_copy_url: true,
+        };
+
+        Ok(DeviceCodeGrant {
+            device_code: body.device_code,
+            challenge,
         })
     }
 
-    pub fn poll_access_token(&self, challenge: &AuthChallenge) -> Result<AuthSession, String> {
-        let client = reqwest::blocking::Client::new();
-        let max_attempts = usize::try_from(
-            (challenge.expires_in_seconds / challenge.poll_interval_seconds).max(1),
-        )
-        .unwrap_or(180);
+    pub async fn exchange_device_code(&self, device_code: &str) -> Result<String, AuthError> {
+        let response = self
+            .http
+            .post(GITHUB_ACCESS_TOKEN_URL)
+            .header("Accept", "application/json")
+            .form(&[
+                ("client_id", COPILOT_CLIENT_ID),
+                ("device_code", device_code),
+                ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+            ])
+            .send()
+            .await?;
 
-        for _ in 0..max_attempts {
-            let response = client
-                .post(GITHUB_ACCESS_TOKEN_URL)
-                .header("Accept", "application/json")
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .form(&[
-                    ("client_id", COPILOT_CLIENT_ID),
-                    ("device_code", challenge.device_code.as_str()),
-                    ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-                ])
-                .send()
-                .map_err(|err| format!("access token request failed: {err}"))?;
-
-            let payload: GitHubAccessTokenResponse = response
-                .json()
-                .map_err(|err| format!("invalid access token response: {err}"))?;
-
-            if let Some(access_token) = payload.access_token {
-                return Ok(AuthSession {
-                    provider_id: self.id().into(),
-                    method: AuthMethod::OAuth,
-                    state: AuthState::Authenticated,
-                    identity: None,
-                    credentials: vec![Credential {
-                        kind: CredentialKind::AccessToken,
-                        value: access_token,
-                    }],
-                    challenge: Some(challenge.clone()),
-                });
-            }
-
-            match payload.error.as_deref() {
-                Some("authorization_pending") => {
-                    thread::sleep(Duration::from_secs(challenge.poll_interval_seconds));
-                }
-                Some("slow_down") => {
-                    thread::sleep(Duration::from_secs(challenge.poll_interval_seconds + 5));
-                }
-                Some("expired_token") => return Err("device code expired".into()),
-                Some(other) => {
-                    return Err(payload
-                        .error_description
-                        .unwrap_or_else(|| format!("oauth error: {other}")));
-                }
-                None => return Err("missing access token in oauth response".into()),
-            }
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(AuthError::Http { status, body });
         }
 
-        Err("timed out waiting for device authorization".into())
-    }
-}
+        let body: AccessTokenBody = response.json().await?;
+        if let Some(token) = body.access_token {
+            return Ok(token);
+        }
 
-impl Default for CopilotAuthProvider {
-    fn default() -> Self {
-        Self::new()
+        let error = body.error.as_deref().unwrap_or("");
+        match error {
+            "authorization_pending" => Err(AuthError::AuthorizationPending),
+            "slow_down" => Err(AuthError::SlowDown),
+            "expired_token" => Err(AuthError::ExpiredToken),
+            "access_denied" => Err(AuthError::AccessDenied),
+            other => {
+                let message = body
+                    .error_description
+                    .unwrap_or_else(|| format!("oauth error: {other}"));
+                Err(AuthError::Other(message))
+            }
+        }
     }
-}
 
-impl AuthProvider for CopilotAuthProvider {
-    fn id(&self) -> &str {
-        "copilot-github"
-    }
+    pub async fn exchange_copilot_token(
+        &self,
+        github_token: &str,
+    ) -> Result<CopilotToken, AuthError> {
+        let response = self
+            .http
+            .get(COPILOT_TOKEN_URL)
+            .bearer_auth(github_token)
+            .header("Accept", "application/json")
+            .header("Editor-Version", "chat-bot/0.1")
+            .header("Editor-Plugin-Version", "chat-bot/0.1")
+            .send()
+            .await?;
 
-    fn login(&self, credential: Credential) -> Result<AuthSession, String> {
-        self.validate(&credential)?;
-        Ok(AuthSession {
-            provider_id: self.id().into(),
-            method: AuthMethod::DeviceCode,
-            state: AuthState::Pending,
-            identity: None,
-            credentials: vec![credential],
-            challenge: Some(AuthChallenge {
-                provider_id: self.id().into(),
-                auth_url: GITHUB_DEVICE_VERIFY_URL.into(),
-                user_code: String::new(),
-                device_code: String::new(),
-                verification_uri: GITHUB_DEVICE_VERIFY_URL.into(),
-                expires_in_seconds: 900,
-                poll_interval_seconds: 5,
-                can_copy_code: true,
-                can_copy_url: true,
-            }),
+        let status = response.status();
+        if status == StatusCode::UNAUTHORIZED {
+            return Err(AuthError::MissingToken);
+        }
+        if status == StatusCode::FORBIDDEN {
+            return Err(AuthError::Forbidden);
+        }
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(AuthError::Http { status, body });
+        }
+
+        let body: CopilotTokenBody = response.json().await?;
+        let expires_at = DateTime::<Utc>::from_timestamp(body.expires_at, 0)
+            .ok_or_else(|| AuthError::Decode("invalid expires_at".into()))?;
+        let refresh_in = ChronoDuration::seconds(body.refresh_in.max(60));
+        Ok(CopilotToken {
+            token: body.token,
+            expires_at,
+            refresh_in,
         })
     }
 
-    fn logout(&self, session: &AuthSession) -> Result<(), String> {
-        if session.provider_id != self.id() {
-            return Err("session provider mismatch".into());
-        }
-        Ok(())
-    }
+    pub async fn fetch_identity(&self, github_token: &str) -> Result<Identity, AuthError> {
+        let response = self
+            .http
+            .get(GITHUB_USER_URL)
+            .bearer_auth(github_token)
+            .header("Accept", "application/vnd.github+json")
+            .send()
+            .await?;
 
-    fn refresh(&self, session: &AuthSession) -> Result<AuthSession, String> {
-        if session.provider_id != self.id() {
-            return Err("session provider mismatch".into());
+        let status = response.status();
+        if status == StatusCode::UNAUTHORIZED {
+            return Err(AuthError::MissingToken);
         }
-        Ok(session.clone())
-    }
-
-    fn validate(&self, credential: &Credential) -> Result<(), String> {
-        match credential.kind {
-            CredentialKind::DeviceCode
-            | CredentialKind::UserCode
-            | CredentialKind::SessionToken
-            | CredentialKind::AccessToken => Ok(()),
-            _ => Err("unsupported copilot credential kind".into()),
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(AuthError::Http { status, body });
         }
-    }
 
-    fn begin_device_flow(&self) -> Result<AuthChallenge, String> {
-        Err("use async device flow request".into())
+        let body: UserBody = response.json().await?;
+        Ok(Identity {
+            id: body.id.to_string(),
+            display_name: body.name.unwrap_or(body.login),
+            email: body.email,
+            provider: PROVIDER_ID.into(),
+        })
     }
 }
