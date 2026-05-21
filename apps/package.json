@@ -12,15 +12,17 @@
     "tauri:build": "CI=false tauri build",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,md}\" \"src-tauri/**/*.{toml,rs,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"*.{json,js,ts,md}\" \"src-tauri/**/*.json\"",
     "preview": "vite preview",
     "cargo:check": "cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.8.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "@tauri-apps/api": "^2.8.0",
     "swr": "^2.3.3",
     "zustand": "^5.0.8"
   },
@@ -40,6 +42,7 @@
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.6"
   }
 }

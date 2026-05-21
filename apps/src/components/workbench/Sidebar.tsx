@@ -1,3 +1,8 @@
+import { useState } from 'react'
+
+import { createConversation } from '../../lib/messageApi'
+import { useTaskUiStore } from '../../store/taskUiStore'
+
 const sections = [
   {
     title: '所有会话',
@@ -14,11 +19,30 @@ const sections = [
 ]
 
 export function Sidebar() {
+  const setActiveConversationId = useTaskUiStore((state) => state.setActiveConversationId)
+  const [creating, setCreating] = useState(false)
+
+  const handleNewConversation = async () => {
+    if (creating) return
+    setCreating(true)
+    try {
+      const created = await createConversation()
+      setActiveConversationId(created.id)
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return (
     <aside className="flex h-full min-h-[820px] flex-col rounded-[28px] border border-white/10 bg-[#1d2127] p-4 text-slate-200 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
-      <button className="mb-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#070b15] px-4 py-3 text-left text-sm font-medium text-white transition hover:border-violet-400/40">
+      <button
+        type="button"
+        onClick={handleNewConversation}
+        disabled={creating}
+        className="mb-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#070b15] px-4 py-3 text-left text-sm font-medium text-white transition hover:border-violet-400/40 disabled:opacity-60"
+      >
         <span className="text-lg">✎</span>
-        <span>新建会话</span>
+        <span>{creating ? '创建中…' : '新建会话'}</span>
       </button>
 
       <div className="mb-4 rounded-2xl bg-white/10 px-4 py-3 text-sm font-medium text-white">所有会话</div>
