@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use super::{EventId, Task, TaskError, TaskEvent, TaskEventKind, TaskId};
+use super::{
+    ApprovalRequest, ApprovalRequestId, EventId, Run, RunId, Task, TaskError, TaskEvent,
+    TaskEventKind, TaskId,
+};
 
 pub trait TaskStore {
     fn save_task(&mut self, task: Task) -> Result<(), TaskError>;
@@ -13,10 +16,27 @@ pub trait EventStore {
     fn list_events(&self, task_id: &TaskId) -> Result<Vec<TaskEvent>, TaskError>;
 }
 
+pub trait RunStore {
+    fn save_run(&mut self, run: Run) -> Result<(), TaskError>;
+    fn load_run(&self, id: &RunId) -> Result<Option<Run>, TaskError>;
+    fn list_runs_by_task(&self, task_id: &TaskId) -> Result<Vec<Run>, TaskError>;
+}
+
+pub trait ApprovalStore {
+    fn save_approval_request(&mut self, request: ApprovalRequest) -> Result<(), TaskError>;
+    fn load_approval_request(
+        &self,
+        id: &ApprovalRequestId,
+    ) -> Result<Option<ApprovalRequest>, TaskError>;
+    fn list_approval_requests(&self) -> Result<Vec<ApprovalRequest>, TaskError>;
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct InMemoryTaskStore {
     tasks: HashMap<String, Task>,
     events: HashMap<String, Vec<TaskEvent>>,
+    runs: HashMap<String, Run>,
+    approvals: HashMap<String, ApprovalRequest>,
 }
 
 impl InMemoryTaskStore {
@@ -78,5 +98,43 @@ impl EventStore for InMemoryTaskStore {
 
     fn list_events(&self, task_id: &TaskId) -> Result<Vec<TaskEvent>, TaskError> {
         Ok(self.events.get(&task_id.0).cloned().unwrap_or_default())
+    }
+}
+
+impl RunStore for InMemoryTaskStore {
+    fn save_run(&mut self, run: Run) -> Result<(), TaskError> {
+        self.runs.insert(run.id.0.clone(), run);
+        Ok(())
+    }
+
+    fn load_run(&self, id: &RunId) -> Result<Option<Run>, TaskError> {
+        Ok(self.runs.get(&id.0).cloned())
+    }
+
+    fn list_runs_by_task(&self, task_id: &TaskId) -> Result<Vec<Run>, TaskError> {
+        Ok(self
+            .runs
+            .values()
+            .filter(|run| run.task_id == *task_id)
+            .cloned()
+            .collect())
+    }
+}
+
+impl ApprovalStore for InMemoryTaskStore {
+    fn save_approval_request(&mut self, request: ApprovalRequest) -> Result<(), TaskError> {
+        self.approvals.insert(request.id.0.clone(), request);
+        Ok(())
+    }
+
+    fn load_approval_request(
+        &self,
+        id: &ApprovalRequestId,
+    ) -> Result<Option<ApprovalRequest>, TaskError> {
+        Ok(self.approvals.get(&id.0).cloned())
+    }
+
+    fn list_approval_requests(&self) -> Result<Vec<ApprovalRequest>, TaskError> {
+        Ok(self.approvals.values().cloned().collect())
     }
 }

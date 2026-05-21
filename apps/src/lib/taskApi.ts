@@ -51,6 +51,16 @@ export interface RunTaskResponseDto {
   error?: string
 }
 
+export interface RunDto {
+  id: string
+  task_id: string
+  conversation_id: string
+  status: string
+  current_step_index?: number | null
+  started_at?: string | null
+  finished_at?: string | null
+}
+
 export const demoTasks: TaskDto[] = [
   {
     id: 'task_plan_default_1',
