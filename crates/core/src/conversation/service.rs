@@ -1,15 +1,15 @@
 use super::{
     Conversation, ConversationId, ConversationStatus, ConversationStore, Message,
-    MessageAttachment, MessageId, MessageRole, MessageStore,
+    MessageAttachment, MessageId, MessageRole,
 };
 
 pub struct ConversationService;
 
 impl ConversationService {
-    pub fn create_conversation(
-        store: &mut impl ConversationStore,
-        id: impl Into<String>,
-        title: impl Into<String>,
+    pub async fn create_conversation<S: ConversationStore + ?Sized>(
+        store: &S,
+        id: impl Into<String> + Send,
+        title: impl Into<String> + Send,
     ) -> Result<Conversation, String> {
         let conversation = Conversation {
             id: ConversationId(id.into()),
@@ -19,15 +19,15 @@ impl ConversationService {
             created_at: String::new(),
             updated_at: String::new(),
         };
-        store.save_conversation(conversation.clone())?;
+        store.save_conversation(conversation.clone()).await?;
         Ok(conversation)
     }
 
-    pub fn append_user_message(
-        store: &mut impl MessageStore,
+    pub async fn append_user_message<S: ConversationStore + ?Sized>(
+        store: &S,
         conversation_id: ConversationId,
-        message_id: impl Into<String>,
-        content: impl Into<String>,
+        message_id: impl Into<String> + Send,
+        content: impl Into<String> + Send,
         model_id: Option<String>,
         attachments: Vec<MessageAttachment>,
     ) -> Result<Message, String> {
@@ -40,15 +40,15 @@ impl ConversationService {
             attachments,
             created_at: String::new(),
         };
-        store.append_message(message.clone())?;
+        store.append_message(message.clone()).await?;
         Ok(message)
     }
 
-    pub fn append_assistant_message(
-        store: &mut impl MessageStore,
+    pub async fn append_assistant_message<S: ConversationStore + ?Sized>(
+        store: &S,
         conversation_id: ConversationId,
-        message_id: impl Into<String>,
-        content: impl Into<String>,
+        message_id: impl Into<String> + Send,
+        content: impl Into<String> + Send,
         model_id: Option<String>,
         attachments: Vec<MessageAttachment>,
     ) -> Result<Message, String> {
@@ -61,7 +61,7 @@ impl ConversationService {
             attachments,
             created_at: String::new(),
         };
-        store.append_message(message.clone())?;
+        store.append_message(message.clone()).await?;
         Ok(message)
     }
 }

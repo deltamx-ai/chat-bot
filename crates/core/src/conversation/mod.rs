@@ -2,10 +2,12 @@
 
 mod message;
 mod service;
+mod sqlite;
 mod store;
 mod types;
 
 pub use message::{Message, MessageAttachment, MessageId, MessageRole};
 pub use service::ConversationService;
-pub use store::{ConversationStore, InMemoryConversationStore, MessageStore};
+pub use sqlite::SqliteConversationStore;
+pub use store::{ConversationStore, InMemoryConversationStore};
 pub use types::{Conversation, ConversationId, ConversationStatus};

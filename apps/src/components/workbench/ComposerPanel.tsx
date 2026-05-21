@@ -12,13 +12,14 @@ interface ComposerPanelProps {
     model_id?: string | null
     attachments: MessageAttachmentDto[]
   }) => Promise<SendMessageResponseDto>
+  onStop?: () => void
   isSubmitting: boolean
 }
 
 const ghostButtonClass =
   'rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-violet-400/40 hover:text-white'
 
-export function ComposerPanel({ conversationId, models, onSend, isSubmitting }: ComposerPanelProps) {
+export function ComposerPanel({ conversationId, models, onSend, onStop, isSubmitting }: ComposerPanelProps) {
   const [content, setContent] = useState('')
   const [selectedModel, setSelectedModel] = useState<string>('gpt-5.5')
   const [attachments, setAttachments] = useState<MessageAttachmentDto[]>([])
@@ -84,21 +85,34 @@ export function ComposerPanel({ conversationId, models, onSend, isSubmitting }: 
         rows={5}
       />
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex justify-end gap-2">
+        {isSubmitting && onStop ? (
+          <button
+            type="button"
+            onClick={onStop}
+            className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 transition hover:brightness-110"
+          >
+            ⏹ 停止
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={!canSend}
           onClick={async () => {
             const nextContent = content.trim()
             if (!nextContent) return
-            await onSend({
-              conversation_id: conversationId,
-              content: nextContent,
-              model_id: selectedModel,
-              attachments,
-            })
-            setContent('')
-            setAttachments([])
+            try {
+              await onSend({
+                conversation_id: conversationId,
+                content: nextContent,
+                model_id: selectedModel,
+                attachments,
+              })
+              setContent('')
+              setAttachments([])
+            } catch {
+              // error already surfaced via reportGlobalError; keep textarea so user can retry
+            }
           }}
           className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-500 px-5 py-3 text-sm text-white transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
         >
