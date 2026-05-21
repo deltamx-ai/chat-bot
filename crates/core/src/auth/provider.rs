@@ -1,15 +1,7 @@
-use super::{AuthChallenge, AuthSession, Credential};
+use super::AuthMethod;
 
-pub trait AuthProvider {
-    fn id(&self) -> &str;
-
-    fn login(&self, credential: Credential) -> Result<AuthSession, String>;
-
-    fn logout(&self, session: &AuthSession) -> Result<(), String>;
-
-    fn refresh(&self, session: &AuthSession) -> Result<AuthSession, String>;
-
-    fn validate(&self, credential: &Credential) -> Result<(), String>;
-
-    fn begin_device_flow(&self) -> Result<AuthChallenge, String>;
+pub trait AuthProvider: Send + Sync {
+    fn id(&self) -> &'static str;
+    fn display_name(&self) -> &'static str;
+    fn methods(&self) -> &'static [AuthMethod];
 }
